@@ -5,15 +5,12 @@
 
 #include <WINSOCK2.H>
 #include <WS2tcpip.h>
-
 #include <iostream>
 #include <sstream>
 
+#include "pthread.h"
 #include "./HttpsConnection.h"
 
-#define HOST "yxsm.qq.com"
-#define GET "/activity/161229.jpg"
-#define PORT "443"
 #define SAVENAME "./161229.jpg"
 
 using namespace std;
@@ -77,14 +74,14 @@ int HttpDownloader::initUrlInfoWithUrl(const std::string & httpUrl, HttpDownload
 
 	index = url.find("/");
 	
-	if (index = string::npos)
+	if (index == string::npos)
 	{
 		info.host = url;
 		info.getStr = "/index.html";
 	}
 	else
 	{
-		info.host = url.substr(0, index+1);
+		info.host = url.substr(0, index);
 		info.getStr = url.substr(index);
 	}
 
@@ -122,8 +119,11 @@ int HttpDownloader::createSocket(HttpDownloadUrlInfo & info)
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
+	stringstream ss;
+	ss << info.port;
+
 	info.addrResult = NULL;
-	int error = getaddrinfo(info.host.c_str(), PORT, &hints, &info.addrResult);
+	int error = getaddrinfo(info.host.c_str(), ss.str().c_str(), &hints, &info.addrResult);
 	if (error != 0)
 	{
 		cout << "getaddrinfo error:" << error << endl;
@@ -139,55 +139,125 @@ int HttpDownloader::createSocket(HttpDownloadUrlInfo & info)
 	return 0;
 }
 
+void HttpDownloader::startDownload()
+{
+	for (unsigned int i = 0; i < mUrls.size(); i++)
+	{
+		mUrls.at(i).status = 0;
+		int err = startDownload(mUrls.at(i));
+		if (err == 0)
+		{
+			mUrls.at(i).status = 1;
+		}
+	}
+}
+
+int HttpDownloader::bindSSL(HttpDownloadUrlInfo & info)
+{
+	// New context saying we are a client, and using SSL 2 or 3
+	info.sslContext = SSL_CTX_new (SSLv23_client_method ());
+	if (info.sslContext == NULL)
+	{
+		ERR_print_errors_fp (stderr);
+		return -1;
+	}
+
+	// Create an SSL struct for the connection
+	info.sslHandle = SSL_new (info.sslContext);
+	if (info.sslHandle == NULL)
+	{
+		ERR_print_errors_fp (stderr);
+		return -1;
+	}
+
+	// Connect the SSL struct to our connection
+	if (!SSL_set_fd (info.sslHandle, info.sockfd))
+	{
+		ERR_print_errors_fp (stderr);
+		return -1;
+	}
+	return 0;
+}
+
+void * HttpDownloader::thread_recv_send(void* param)
+{
+	HttpDownloadUrlInfo * info = (HttpDownloadUrlInfo*)param;
+	if (!info)
+	{
+		cout << "thread_recv_send get error param" << endl;
+		return NULL;
+	}
+
+
+	return NULL;
+}
+
+int HttpDownloader::startDownload(HttpDownloadUrlInfo & info)
+{
+	int err = createSocket(info);
+	if (err != 0)
+	{
+		std::cout << "create socket error" << std::endl;
+		return -1;
+	}
+
+	//非阻塞
+	u_long mode = 1;
+	err = ioctlsocket(info.sockfd, FIONBIO, &mode);
+	if (err != NO_ERROR)
+	{
+		cout << "set non-block socket error" << endl;
+		return -1;
+	}
+
+	//绑定到SSL
+	if (info.needSSL)
+	{
+		err = bindSSL(info);
+		if (err != 0)
+		{
+			std::cout << "bindSSL error" << std::endl;
+			return -1;
+		}
+	}
+
+	//连接
+	err = connect(info.sockfd, info.addrResult->ai_addr, info.addrResult->ai_addrlen);
+
+	//创建线程读写
+	err = pthread_create(&info.pid, NULL, HttpDownloader::thread_recv_send, &info);
+	if (err != 0)
+	{
+		cout << "create thread error" << endl;
+		return -1;
+	}
+	return 0;
+}
+
 int test_interface(int argc, char **argv)
 {
 	WSADATA data;
 	int err = WSAStartup(MAKEWORD(2, 2), &data);
 
 	HttpDownloader downloader;
-	downloader.addUrl("https://yxsm.qq.com/activity/161229.jpg");
-
-	HttpDownloadUrlInfo & urlInfo = downloader.getUrls().at(0);
-	err = downloader.createSocket(urlInfo);
-	if (err != 0)
-	{
-		std::cout << "create socket error" << std::endl;
-		return 0;
-	}
-
 	downloader.initSSLEnv();
 
-	// New context saying we are a client, and using SSL 2 or 3
-	SSL_CTX * sslContext = SSL_CTX_new (SSLv23_client_method ());
-	if (sslContext == NULL)
+	downloader.addUrl("https://yxsm.qq.com/activity/161229.jpg");
+	downloader.startDownload();
+
+	vector<HttpDownloadUrlInfo> & infos = downloader.getUrls();
+	for (u_int i = 0; i < infos.size(); i++)
 	{
-		ERR_print_errors_fp (stderr);
-		return 0;
+		if (infos.at(i).status != 0)
+		{
+			void * status;
+			pthread_join(infos.at(i).pid, &status);
+		}
 	}
 
-	// Create an SSL struct for the connection
-	SSL* sslHandle = SSL_new (sslContext);
-	if (sslHandle == NULL)
-	{
-		ERR_print_errors_fp (stderr);
-		return 0;
-	}
+	cout << "main thread end" << endl;
 
-	// Connect the SSL struct to our connection
-	if (!SSL_set_fd (sslHandle, socket))
-	{
-		ERR_print_errors_fp (stderr);
-		return 0;
-	}
-
-	
-
-	int ret = connect (socket, addrResult->ai_addr, addrResult->ai_addrlen);
-
-
-	SSL_CTX_set_verify(sslContext, SSL_VERIFY_NONE, NULL); 
-
-
+	/*
 	// Initiate SSL handshake
 	while (1)
 	{
@@ -291,7 +361,7 @@ int test_interface(int argc, char **argv)
 	}
 	if (sslContext)
 		SSL_CTX_free (sslContext);
-
+	*/
 	return 0;
 }
 

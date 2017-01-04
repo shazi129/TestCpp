@@ -5,6 +5,7 @@
 //#define FirstGL
 #define HttpsConnection
 //#define NetDemo
+//#define TestPthread
 
 int test_interface(int argc, char ** argv);
 
