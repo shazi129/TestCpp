@@ -15,9 +15,19 @@
 class HttpDownloadUrlInfo
 {
 public:
+	enum E_DOWNLOAD_STATUS
+	{
+		E_NONE,
+		E_CONNECTING,
+		E_DOWNLOADING,
+		E_DOWNLOADED,
+	};
+
+public:
 	std::string host;
 	int port;
 	std::string getStr;
+	std::string saveFileName;
 
 	int sockfd;
 	struct addrinfo*  addrResult;
@@ -27,7 +37,17 @@ public:
 	SSL_CTX * sslContext;
 
 	pthread_t pid; //当前下载的线程id
-	int status;
+	E_DOWNLOAD_STATUS status; //0表示
+
+public:
+	HttpDownloadUrlInfo()
+	{
+		status = E_NONE;
+		sslHandle = NULL;
+		sslContext = NULL;
+		addrResult = NULL;
+		sockfd = 0;
+	}
 };
 
 class HttpDownloader

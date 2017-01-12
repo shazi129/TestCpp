@@ -11,23 +11,24 @@
 #include "pthread.h"
 #include "./HttpsConnection.h"
 
-#define SAVENAME "./161229.jpg"
-
 using namespace std;
+
+#define WRITE_BUFF_SIZE 1024
+#define READ_BUFF_SIZE 10240
 
 
 int HttpDownloader::stripHttpHeader(char * buff, int buffSize)
 {
 	for (int i = 0; i < buffSize-4; i++)
 	{
-		if (buff[i] != 0x0D
-			&& buff[i+1] != 0x0A
-			&& buff[i+2] != 0x0D
-			&& buff[i+3] != 0x0A)
+		if (buff[i] == 0x0D
+			&& buff[i+1] == 0x0A
+			&& buff[i+2] == 0x0D
+			&& buff[i+3] == 0x0A)
 		{
+			cout << "find http haader end pos:" << i+4 << endl;
 			return i+4;
 		}
-		return i+4;
 	}
 	return -1;
 }
@@ -72,8 +73,8 @@ int HttpDownloader::initUrlInfoWithUrl(const std::string & httpUrl, HttpDownload
 		info.port = 80;
 	}
 
+	//获取get字符串
 	index = url.find("/");
-	
 	if (index == string::npos)
 	{
 		info.host = url;
@@ -84,6 +85,10 @@ int HttpDownloader::initUrlInfoWithUrl(const std::string & httpUrl, HttpDownload
 		info.host = url.substr(0, index);
 		info.getStr = url.substr(index);
 	}
+
+	//获取文件名
+	index = info.getStr.rfind("/");
+	info.saveFileName = info.getStr.substr(index+1);
 
 	return 0;
 }
@@ -143,12 +148,7 @@ void HttpDownloader::startDownload()
 {
 	for (unsigned int i = 0; i < mUrls.size(); i++)
 	{
-		mUrls.at(i).status = 0;
-		int err = startDownload(mUrls.at(i));
-		if (err == 0)
-		{
-			mUrls.at(i).status = 1;
-		}
+		startDownload(mUrls.at(i));
 	}
 }
 
@@ -188,6 +188,150 @@ void * HttpDownloader::thread_recv_send(void* param)
 		return NULL;
 	}
 
+	FD_SET fdread;
+	FD_SET fdwrite;
+
+	timeval timout;
+	timout.tv_sec = 3;
+	timout.tv_usec = 0;
+
+	//请求数据
+	stringstream sendStream;
+	sendStream << "GET " << info->getStr << " HTTP/1.1\r\n"
+	            << "HOST: "<< info->host <<"\r\n"
+	            << "connection: keep-alive\r\n\r\n";
+	
+	int totalSendByte = sendStream.str().size();
+	int leftSendByte = totalSendByte;
+
+	char writeBuff[WRITE_BUFF_SIZE];
+	memset(writeBuff, 0, WRITE_BUFF_SIZE);
+	memcpy(writeBuff, sendStream.str().c_str(), totalSendByte);
+
+	//下载的文件
+	FILE * file = fopen(info->saveFileName.c_str(), "wb");
+
+	char readBuff[READ_BUFF_SIZE];
+
+	//是否已经剥掉了http头
+	bool hasStripedHead = false;
+
+	while(true)
+	{
+		FD_ZERO(&fdread);
+		FD_ZERO(&fdwrite);
+
+		FD_SET(info->sockfd, &fdread);
+		FD_SET(info->sockfd, &fdwrite);
+
+		int err = select(info->sockfd+1, &fdread, &fdwrite, NULL, &timout);
+		if (err == 0)
+		{
+			cout << "timeout" << endl;
+			break;
+		}
+		else if (err > 0)
+		{
+			//正在连接状态, 如果需要，建立ssl链接
+			if (info->status == HttpDownloadUrlInfo::E_CONNECTING && info->needSSL)
+			{
+				err = SSL_connect(info->sslHandle);
+				if (err != 1)
+				{
+					int sslError = SSL_get_error(info->sslHandle, err);
+					cout << "SSL_connect error:" << err << ", ssl error:" << sslError << endl;
+					if (sslError == SSL_ERROR_WANT_READ || sslError == SSL_ERROR_WANT_WRITE)
+					{
+						continue;
+					}
+					break;
+				}
+			}
+
+			//可写
+			if (FD_ISSET(info->sockfd, &fdwrite) && leftSendByte > 0)
+			{
+				int writeIndex = totalSendByte - leftSendByte;
+
+				cout << "select can write, total:" << totalSendByte << "left:" << leftSendByte << ", write buff:\n" << writeBuff << endl;
+
+				int writeByte = SSL_write(info->sslHandle, writeBuff + writeIndex, leftSendByte);
+				cout << "write " << writeByte << " bytes, left:" << leftSendByte << "bytes" << endl;
+
+				if (writeByte <= 0)
+				{
+					int sslError = SSL_get_error(info->sslHandle, writeByte);
+					cout << "SSL_write error:" << err << ", ssl error:" << sslError << endl;
+					if (sslError == SSL_ERROR_WANT_READ || sslError == SSL_ERROR_WANT_WRITE)
+					{
+						continue;
+					}
+					else
+					{
+						break;
+					}
+				}
+				
+				leftSendByte -= writeByte;
+			}
+			else if (FD_ISSET(info->sockfd, &fdread))
+			{
+				cout << "select can read" << endl;
+
+				memset(readBuff, 0, READ_BUFF_SIZE);
+				int readByte = SSL_read(info->sslHandle, readBuff, READ_BUFF_SIZE);
+				cout << "read " << readByte << " bytes, hasStripedHead:" << hasStripedHead << endl;
+
+				if (readByte > 0)
+				{
+					int writeFileCount = 0;
+
+					if (!hasStripedHead)
+					{
+						int index = HttpDownloader::stripHttpHeader(readBuff, readByte);
+						if (0 < index && index < readByte)
+						{
+							hasStripedHead = TRUE;
+							writeFileCount = fwrite(readBuff+index, 1, readByte-index, file);
+						}
+						else
+						{
+							writeFileCount = fwrite(readBuff, 1, readByte, file);
+						}
+					}
+					else
+					{
+						writeFileCount = fwrite(readBuff, 1, readByte, file);
+					}
+				}
+				else if (readByte == 0)
+				{
+					cout << "read end" << endl;
+					break;
+				}
+				else
+				{
+					int sslError = SSL_get_error(info->sslHandle, readByte);
+					cout << "SSL_read error:" << err << ", ssl error:" << sslError << endl;
+					if (sslError == SSL_ERROR_WANT_READ || sslError == SSL_ERROR_WANT_WRITE)
+					{
+						continue;
+					}
+					else
+					{
+						break;
+					}
+				}
+			}
+		}
+		else
+		{
+			cout << "select error:" << WSAGetLastError() << endl;
+			break;
+		}
+	}
+
+	fclose(file);
 
 	return NULL;
 }
@@ -223,11 +367,15 @@ int HttpDownloader::startDownload(HttpDownloadUrlInfo & info)
 
 	//连接
 	err = connect(info.sockfd, info.addrResult->ai_addr, info.addrResult->ai_addrlen);
+	cout <<"connect end, ret:" << err << endl;
+
+	info.status = HttpDownloadUrlInfo::E_CONNECTING;
 
 	//创建线程读写
 	err = pthread_create(&info.pid, NULL, HttpDownloader::thread_recv_send, &info);
 	if (err != 0)
 	{
+		info.status = HttpDownloadUrlInfo::E_NONE;
 		cout << "create thread error" << endl;
 		return -1;
 	}
@@ -242,13 +390,16 @@ int test_interface(int argc, char **argv)
 	HttpDownloader downloader;
 	downloader.initSSLEnv();
 
-	downloader.addUrl("https://yxsm.qq.com/activity/161229.jpg");
+	downloader.addUrl("https://yxsm.qq.com/activity/170104.jpg");
+	downloader.addUrl("https://yxsm.qq.com/activity/170106.jpg");
+	downloader.addUrl("https://yxsm.qq.com/activity/161213.jpg");
+	downloader.addUrl("https://yxsm.qq.com/activity/161206.jpg");
 	downloader.startDownload();
 
 	vector<HttpDownloadUrlInfo> & infos = downloader.getUrls();
 	for (u_int i = 0; i < infos.size(); i++)
 	{
-		if (infos.at(i).status != 0)
+		if (infos.at(i).status != HttpDownloadUrlInfo::E_NONE)
 		{
 			void * status;
 			pthread_join(infos.at(i).pid, &status);
@@ -256,112 +407,6 @@ int test_interface(int argc, char **argv)
 	}
 
 	cout << "main thread end" << endl;
-
-	/*
-	// Initiate SSL handshake
-	while (1)
-	{
-		int ret = SSL_connect (sslHandle);
-		if (ret != 1)
-		{
-			int error = SSL_get_error(sslHandle, ret);
-			if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
-			{
-				std::cout << "SSLConnect get WANT IO ERROR" << std::endl;
-				continue;
-			}
-			std::cout << "SSLConnect error" << error << std::endl;
-			return 0;
-		}
-		break;
-	}
-	
-
-	std::stringstream ss;
-	ss << "GET " << GET << " HTTP/1.1\r\n"<<"HOST: "<<HOST<<"\r\n"<<"connection: keep-alive\r\n\r\n";
-	std::cout << ss.str().c_str();
-
-	while(1)
-	{
-		int ret = SSL_write (sslHandle, (char*)ss.str().c_str(), strlen (ss.str().c_str()));
-		if (ret < 0)
-		{
-			int error = SSL_get_error(sslHandle, ret);
-			if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
-			{
-				std::cout << "SSL Write get WANT IO ERROR" << std::endl;
-				continue;
-			}
-			std::cout << "SSL Write error" << error << std::endl;
-			return 0;
-		}
-		break;
-	}
-	
-
-	const int readSize = 102400;
-	char buffer[102400];
-
-	FILE * file = fopen("./a.jpg", "wb");
-
-	bool hasStripedHead = FALSE;
-
-	while (1)
-	{
-		memset(buffer, 0, readSize);
-		int received = SSL_read (sslHandle, buffer, readSize - 1);
-		if (received < 0)
-		{
-			int error = SSL_get_error(sslHandle, received);
-			if (error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE)
-			{
-				std::cout << "SSLRead get WANT IO ERROR" << std::endl;
-				continue;
-			}
-			std::cout << "SSLRead error:" << error << std::endl;
-			return 0;
-		}
-		else if (received > 0)
-		{
-			printf ("%s", buffer);
-			int writeCount = 0;
-			if (!hasStripedHead)
-			{
-				int index = HttpDownloader::stripHttpHeader(buffer, received);
-				if (0 < index && index < received)
-				{
-					hasStripedHead = TRUE;
-					writeCount = fwrite(buffer+index, 1, received-index, file);
-				}
-				else
-				{
-					writeCount = fwrite(buffer, 1, received, file);
-				}
-			}
-			else
-			{
-				writeCount = fwrite(buffer, 1, received, file);
-			}
-			continue;
-		}
-		fflush(file);
-		
-		fclose(file);
-		std::cout << "SSLRead end" << std::endl;
-
-		break;
-	}
-
-	if (socket)
-		closesocket(socket);
-	if (sslHandle)
-	{
-		SSL_shutdown (sslHandle);
-		SSL_free (sslHandle);
-	}
-	if (sslContext)
-		SSL_CTX_free (sslContext);
-	*/
 	return 0;
 }
 
