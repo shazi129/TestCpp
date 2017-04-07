@@ -39,6 +39,8 @@ public:
 	pthread_t pid; //当前下载的线程id
 	E_DOWNLOAD_STATUS status; //0表示
 
+	int downloadSize;
+
 public:
 	HttpDownloadUrlInfo()
 	{
@@ -47,6 +49,7 @@ public:
 		sslContext = NULL;
 		addrResult = NULL;
 		sockfd = 0;
+		downloadSize = 0;
 	}
 };
 

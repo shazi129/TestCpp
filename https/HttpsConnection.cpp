@@ -293,16 +293,20 @@ void * HttpDownloader::thread_recv_send(void* param)
 						{
 							hasStripedHead = TRUE;
 							writeFileCount = fwrite(readBuff+index, 1, readByte-index, file);
+							info->downloadSize += writeFileCount;
 						}
 						else
 						{
 							writeFileCount = fwrite(readBuff, 1, readByte, file);
+							info->downloadSize += writeFileCount;
 						}
 					}
 					else
 					{
 						writeFileCount = fwrite(readBuff, 1, readByte, file);
+						info->downloadSize += writeFileCount;
 					}
+					cout << "download size:" << info->downloadSize << endl;
 				}
 				else if (readByte == 0)
 				{
@@ -390,10 +394,11 @@ int test_interface(int argc, char **argv)
 	HttpDownloader downloader;
 	downloader.initSSLEnv();
 
-	downloader.addUrl("https://yxsm.qq.com/activity/170104.jpg");
-	downloader.addUrl("https://yxsm.qq.com/activity/170106.jpg");
-	downloader.addUrl("https://yxsm.qq.com/activity/161213.jpg");
-	downloader.addUrl("https://yxsm.qq.com/activity/161206.jpg");
+	//downloader.addUrl("https://yxsm.qq.com/activity/170104.jpg");
+	//downloader.addUrl("https://yxsm.qq.com/activity/170106.jpg");
+	//downloader.addUrl("https://yxsm.qq.com/activity/161213.jpg");
+	//downloader.addUrl("https://yxsm.qq.com/activity/161206.jpg");
+	downloader.addUrl("https://dlied5.qq.com/HeroGame/Release/BFile/20170213101302/all_table_server.zip");
 	downloader.startDownload();
 
 	vector<HttpDownloadUrlInfo> & infos = downloader.getUrls();
