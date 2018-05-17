@@ -13,7 +13,8 @@ using namespace std;
 //#define  Convert2Https
 //#define VirtualDestructor
 //#define TypeId
-#define  FactoryPattern
+//#define  FactoryPattern
+#define ModelBaseTest
 
 int test_interface(int argc, char ** argv);
 
