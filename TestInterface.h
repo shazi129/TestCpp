@@ -5,7 +5,7 @@
 
 using namespace std;
 
-//#define FirstTest
+#define FirstTest
 //#define FirstGL
 //#define HttpsConnection
 //#define NetDemo
@@ -14,7 +14,7 @@ using namespace std;
 //#define VirtualDestructor
 //#define TypeId
 //#define  FactoryPattern
-#define ModelBaseTest
+//#define ModelBaseTest
 
 int test_interface(int argc, char ** argv);
 
