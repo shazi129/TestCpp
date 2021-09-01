@@ -5,7 +5,7 @@
 
 using namespace std;
 
-#define FirstTest
+//#define FirstTest
 //#define FirstGL
 //#define HttpsConnection
 //#define NetDemo
@@ -15,6 +15,7 @@ using namespace std;
 //#define TypeId
 //#define  FactoryPattern
 //#define ModelBaseTest
+#define SmartPoint
 
 int test_interface(int argc, char ** argv);
 

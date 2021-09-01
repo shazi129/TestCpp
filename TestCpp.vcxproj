@@ -139,10 +139,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="DesignPattern\FactoryPattern.cpp" />
+    <ClCompile Include="DrawLine\Bresenham.cpp" />
+    <ClCompile Include="DrawLine\DDA.cpp" />
     <ClCompile Include="FirstTest\FirstTest.cpp" />
+    <ClCompile Include="https\Convert2Https.cpp" />
+    <ClCompile Include="https\HttpsConnection.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="ModelBase\ModelBase.cpp" />
+    <ClCompile Include="OpenGL\FirstGL.cpp" />
+    <ClCompile Include="pthreads\TestPthread.cpp" />
+    <ClCompile Include="SingleTest\SmartPointer.cpp" />
+    <ClCompile Include="SingleTest\TypeId.cpp" />
+    <ClCompile Include="SingleTest\VirtualDestructor.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DesignPattern\FactoryPattern.h" />
+    <ClInclude Include="https\HttpsConnection.h" />
     <ClInclude Include="TestInterface.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
