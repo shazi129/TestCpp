@@ -1,7 +1,8 @@
 #include "./../TestInterface.h"
-#include "pthread.h"
 
 #ifdef TestPthread
+
+#include "pthread.h"
 
 #include <iostream>
 using namespace std;
