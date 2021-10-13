@@ -1,14 +1,11 @@
 #include "./../TestInterface.h"
 
-#ifdef VirtualDestructor
-
 #include <vector>
 #include <iostream>
 
-#include "vld.h"
-
 using namespace std;
 
+/*
 class Base
 {
 public:
@@ -34,13 +31,13 @@ public:
 
 	vector<int> vecInt;
 };
+*/
 
+/*
 int test_interface(int argc, char ** argv)
 {
 	Base * a = new Derive();
 	delete a;
 	return 0;
 }
-
-
-#endif
+*/
