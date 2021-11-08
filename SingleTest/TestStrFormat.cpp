@@ -7,6 +7,7 @@
 using namespace std;
 
 
+
 int test_interface(int argc, char** argv)
 {
 	char a1[10] = { 'A', 'B', 'C', 'D', 'E'};

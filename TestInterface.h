@@ -18,8 +18,8 @@ using namespace std;
 //#define SmartPoint
 //#define TEST_TEMPLATE
 //#define TEST_PLACEMENT_NEW
-//#define  TEST_FUNCTIONAL
-#define TEST_STR_FORMAT
+#define  TEST_FUNCTIONAL
+//#define TEST_STR_FORMAT
 
 //一些公用的类
 
