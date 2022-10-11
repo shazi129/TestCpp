@@ -145,11 +145,17 @@
     <ClCompile Include="FirstTest\FirstTest.cpp" />
     <ClCompile Include="https\Convert2Https.cpp" />
     <ClCompile Include="https\HttpsConnection.cpp" />
-    <ClCompile Include="main.cpp" />
     <ClCompile Include="ModelBase\ModelBase.cpp" />
     <ClCompile Include="OpenGL\FirstGL.cpp" />
     <ClCompile Include="pthreads\TestPthread.cpp" />
+    <ClCompile Include="SingleTest\PlacementNew.cpp" />
     <ClCompile Include="SingleTest\SmartPointer.cpp" />
+    <ClCompile Include="SingleTest\Template.cpp" />
+    <ClCompile Include="SingleTest\TestFunctional.cpp" />
+    <ClCompile Include="SingleTest\TestShellExecute.cpp" />
+    <ClCompile Include="SingleTest\TestStrFormat.cpp" />
+    <ClCompile Include="SingleTest\TestVector.cpp" />
+    <ClCompile Include="SingleTest\ThisInConstructorParam.cpp" />
     <ClCompile Include="SingleTest\TypeId.cpp" />
     <ClCompile Include="SingleTest\VirtualDestructor.cpp" />
   </ItemGroup>

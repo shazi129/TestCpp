@@ -18,13 +18,11 @@ using namespace std;
 //#define SmartPoint
 //#define TEST_TEMPLATE
 //#define TEST_PLACEMENT_NEW
-#define  TEST_FUNCTIONAL
+//#define  TEST_FUNCTIONAL
 //#define TEST_STR_FORMAT
-
+#define  TEST_SHELL_EXECUTE
 //一些公用的类
 
-
-
-int test_interface(int argc, char ** argv);
+//int test_interface(int argc, char ** argv);
 
 #endif
