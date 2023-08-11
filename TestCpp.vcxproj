@@ -145,6 +145,7 @@
     <ClCompile Include="FirstTest\FirstTest.cpp" />
     <ClCompile Include="https\Convert2Https.cpp" />
     <ClCompile Include="https\HttpsConnection.cpp" />
+    <ClCompile Include="Main.cpp" />
     <ClCompile Include="ModelBase\ModelBase.cpp" />
     <ClCompile Include="OpenGL\FirstGL.cpp" />
     <ClCompile Include="pthreads\TestPthread.cpp" />

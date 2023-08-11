@@ -38,7 +38,7 @@ void TestFunction(const FPaintArgs& Args)
 	}
 }
 
-int main(int argc, char** argv)
+int Tmain(int argc, char** argv)
 {
 	FPaintArgs Args;
 	Args.thisPointer = &Args;
