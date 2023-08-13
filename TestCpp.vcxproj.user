@@ -3,4 +3,14 @@
   <PropertyGroup>
     <ShowAllFiles>true</ShowAllFiles>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LocalDebuggerCommand>$(ProjectDir)External\protobuf\lib\protoc.exe</LocalDebuggerCommand>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommandArguments>-I=$(ProjectDir)ProtoBuf --plugin=protoc-gen-TestCpp=$(ProjectDir)x64\Debug\TestCpp.exe --TestCpp_out=$(ProjectDir)ProtoBuf $(ProjectDir)ProtoBuf\ProtoMessages.proto</LocalDebuggerCommandArguments>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LocalDebuggerCommand>$(ProjectDir)External\protobuf\lib\protoc.exe</LocalDebuggerCommand>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommandArguments>-I=$(ProjectDir)ProtoBuf --plugin=protoc-gen-TestCpp=$(ProjectDir)x64\Debug\TestCpp.exe --TestCpp_out=$(ProjectDir)ProtoBuf $(ProjectDir)ProtoBuf\ProtoMessages.proto</LocalDebuggerCommandArguments>
+  </PropertyGroup>
 </Project>

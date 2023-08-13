@@ -1,7 +1,8 @@
 #include <iostream>
+#include "ProtoBuf/TestProtoBuf.h"
 
-int main()
+int main(int argc, char* argv[])
 {
-	std::cout << "hello world" << std::endl;
-	return 0;
+	//return TestProtoBuf(argc, argv);
+	return TestCodeGenerator(argc, argv);
 }
